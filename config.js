@@ -16,4 +16,9 @@ module.exports = {
     nick: 'slackbot',
     channel: '#mychan'
   },
+  quietTimes: {
+    startQuiet: 0, // Midnight
+    endQuiet: 8, // 8am
+    idleTime: 600000 // If no message within 10 minutes.
+  }
 };
