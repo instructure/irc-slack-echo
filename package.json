@@ -4,7 +4,7 @@
   "description": "Rdio IRC bot",
   "main": "lib/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha -R spec ./test/**/*.test.js"
   },
   "author": "rknLA",
   "license": "MIT",
@@ -15,5 +15,9 @@
   },
   "engines": {
     "node": "0.10.26"
+  },
+  "devDependencies": {
+    "chai": "^3.3.0",
+    "mocha": "^2.3.3"
   }
 }
