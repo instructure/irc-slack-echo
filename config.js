@@ -10,6 +10,7 @@ module.exports = {
     },
     echoChannel: '#irc-echo',
     botName: 'IRCBot',
+    includeSenderInBotName: true
   },
   irc: {
     server: 'your.irc.net',
