@@ -1,7 +1,7 @@
 {
-  "name": "rdioirc",
-  "version": "0.0.1",
-  "description": "Rdio IRC bot",
+  "name": "irc-slack-echo",
+  "version": "0.0.2",
+  "description": "Instructure IRC relay",
   "main": "lib/main.js",
   "scripts": {
     "test": "mocha -R spec ./test/**/*.test.js"
@@ -10,14 +10,13 @@
   "license": "MIT",
   "dependencies": {
     "irc": "~0.5.2",
-    "underscore": "~1.6.0",
     "hapi": "^3.1.0"
   },
   "engines": {
     "node": "0.10.26"
   },
   "devDependencies": {
-    "chai": "^3.3.0",
-    "mocha": "^2.3.3"
+    "chai": "^4.3.0",
+    "mocha": "^9.1.0"
   }
 }
