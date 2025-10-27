@@ -10,12 +10,12 @@ import { handleCommand } from './ircCommands';
  * Set up the IRC client
  */
 
-const client = new IRCClient(process.env.IRC_SERVER || '', process.env.IRC_NICK || '', {
-  userName: process.env.IRC_NICK || '',
-  password: process.env.IRC_PASSWORD || '',
-  channels: [process.env.IRC_CHANNEL || ''],
+const client = new IRCClient(process.env.IRC_SERVER ?? '', process.env.IRC_NICK ?? '', {
+  userName: process.env.IRC_PASSWORD ? process.env.IRC_NICK : undefined,
+  password: process.env.IRC_PASSWORD,
+  channels: process.env.IRC_CHANNEL ? [process.env.IRC_CHANNEL] : [],
   port: 6697,
-  sasl: true,
+  sasl: !!process.env.IRC_PASSWORD,
   debug: true,
   showErrors: true,
   secure: true,
@@ -24,36 +24,41 @@ const client = new IRCClient(process.env.IRC_SERVER || '', process.env.IRC_NICK 
   retryCount: 3
 });
 
-setSlackIrcClient(client);
-
+setSlackIrcClient(client).catch((err: unknown) => {
+  console.error("Error setting Slack IRC client:", err);
+});
 
 /*
  * Set up the IRC listeners
  */
 
-client.addListener('message', function(from, to, message) {
-  var room = to;
+client.addListener('message', function(from: string, to: string, message: string) {
+  const room = to;
   console.log(from + ' => ' + room + ': ' + message);
 
   // propagate the message to slack, even if it was a command
   message = ircToSlack(message);
 
-  var echoMessage = "[" + from + "] " + message;
-  sendEcho(echoMessage);
+  const echoMessage = "[" + from + "] " + message;
+  sendEcho(echoMessage).catch((err: unknown) => {
+    console.error("Error sending message to Slack:", err);
+  });
 
   // handle any commands
-  var botResponse = handleCommand(from, to, message);
+  const botResponse = handleCommand(from, to, message);
   if (botResponse) {
-    client.say(process.env.IRC_CHANNEL || '', botResponse);
-    sendEcho("[" + process.env.IRC_NICK + "] " + botResponse);
+    client.say(process.env.IRC_CHANNEL ?? '', botResponse);
+    sendEcho("[" + (process.env.IRC_NICK ?? '') + "] " + botResponse).catch((err: unknown) => {
+      console.error("Error sending response to Slack:", err);
+    });
   }
 });
 
-client.addListener('error', function(message) {
+client.addListener('error', function(message: string) {
   console.log("ERROR: " + message);
 });
 
 console.log("Connecting to IRC");
-client.connect(function(){
-  console.log("connect called back", arguments);
+client.connect(function(...args){
+  console.log("connect called back", args);
 });

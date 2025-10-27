@@ -1,28 +1,28 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 
 const userMapPath = 'userMap.json';
 
-const userMap = JSON.parse(readFileSync(userMapPath, 'utf8'));
+// TODO replace this terrible thing with a remote data store of some sort
+const userMap = new Map<string, string>();// JSON.parse(readFileSync(userMapPath, 'utf8'));
 
 function writeUserMap() {
   // synchronously write the user map file
-  var userMapString = JSON.stringify(userMap);
+  const userMapString = JSON.stringify(Object.fromEntries(userMap));
   writeFileSync(userMapPath, userMapString);
 }
 
 export function ircToSlack(originalMessage: string) {
-  var modifiedMessage = originalMessage;
-  var urlRegex = /https?:\/\//;
-  var words = modifiedMessage.split(' ');
-  Object.keys(userMap).forEach((key) => {
-    var val = userMap[key];
-    var replaced = words.map((word) => {
+  let modifiedMessage = originalMessage;
+  const urlRegex = /https?:\/\//;
+  const words = modifiedMessage.split(' ');
+  userMap.forEach((val, key) => {
+    const replaced = words.map((word) => {
       if (urlRegex.test(word)) {
         return word;
       } else {
-        var re = new RegExp('\\b' + key + '\\b', 'i');
+        const re = new RegExp('\\b' + key + '\\b', 'i');
         if (re.test(word)) {
-          if (word.indexOf('@') > -1) {
+          if (word.includes('@')) {
             key = '@' + key;
           }
           return word.replace(key, '<@' + val + '>');
@@ -37,26 +37,25 @@ export function ircToSlack(originalMessage: string) {
 }
 
 export function slackNameToIrcName(slackName: string) {
-  var key = Object.keys(userMap).find(key => userMap[key] == slackName);
-  return key || slackName;
+  const key = Object.keys(userMap).find(key => userMap.get(key) == slackName);
+  return key ?? slackName;
 }
 
 export function link(slackName: string, ircName: string) {
-  userMap[ircName] = slackName;
+  userMap.set(ircName, slackName);
   writeUserMap();
   return "Mapped " + slackName + "(slack) to " + ircName + "(irc)";
 }
 
 export function unlink(slackName: string, ircName?: string) {
-  var response = "Unmapped " + slackName + "(slack) from " + ircName + "(irc)";
+  let response = "Unmapped " + slackName + "(slack) from " + (ircName ?? 'ALL') + "(irc)";
   if (ircName) {
-    delete userMap[ircName];
+    userMap.delete(ircName);
   } else {
     response = "";
-    Object.keys(userMap).forEach((key) => {
-      var val = userMap[key];
+    userMap.forEach((val, key) => {
       if (val == slackName) {
-        delete userMap[key];
+        userMap.delete(key);
         response += "Unmapped " + val + "(slack) from " + key + "(irc)\n";
       }
     });
@@ -66,9 +65,8 @@ export function unlink(slackName: string, ircName?: string) {
 }
 
 export function list() {
-  var output = "(slack)\t-> (irc)\n";
-  Object.keys(userMap).forEach((key) => {
-    var val = userMap[key];
+  let output = "(slack)\t-> (irc)\n";
+  userMap.forEach((val, key) => {
     output += val + "\t-> " + key + "\n";
   });
   return output;

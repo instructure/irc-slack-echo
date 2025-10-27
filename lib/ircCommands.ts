@@ -1,4 +1,4 @@
-var commands = {
+const commands = {
   // Empty commands...
   'empty': function() {
     return "Yes...?";
@@ -34,10 +34,10 @@ var commands = {
 };
 
 function getCommand(message: string) {
-  var splitMessage = message.split(' ');
+  const splitMessage = message.split(' ');
   if (splitMessage.length > 0) {
     if (splitMessage[0] == process.env.IRC_NICK ||
-        splitMessage[0] == process.env.IRC_NICK + ':') {
+        splitMessage[0] == `${process.env.IRC_NICK ?? ''}:`) {
       if (splitMessage.length == 1) {
         return {
           cmd: 'empty',
@@ -53,11 +53,11 @@ function getCommand(message: string) {
 }
 
 function isValidCommand(cmd: string): cmd is keyof typeof commands {
-  return commands.hasOwnProperty(cmd);
+  return cmd in commands;
 }
 
 export function handleCommand(from: string, to: string, message: string) {
-  var parsed = getCommand(message);
+  const parsed = getCommand(message);
   if (parsed) {
     if (isValidCommand(parsed.cmd)) {
       return commands[parsed.cmd]();

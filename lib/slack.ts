@@ -3,21 +3,23 @@ import { SocketModeClient } from '@slack/socket-mode';
 import { Client as IRCClient } from 'irc';
 import * as mapping from './mapping';
 
-const triggerWords = (process.env.SLACK_TRIGGER_WORDS || 'ircbot,!').split(',');
+const triggerWords = (process.env.SLACK_TRIGGER_WORDS ?? 'ircbot,!').split(',');
 
 const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
-const socketModeClient = new SocketModeClient({ appToken: process.env.SLACK_APP_TOKEN || '' });
-socketModeClient.on('message.channels', async ({ payload }) => {
-  if (payload.channel_id == process.env.SLACK_CHANNEL_ID) {
-    handleSlackInput(payload);
+const socketModeClient = new SocketModeClient({ appToken: process.env.SLACK_APP_TOKEN ?? '' });
+socketModeClient.on('message.channels', ({ payload }: { payload: { event: GenericMessageEvent } }) => {
+  if (payload.event.channel == process.env.SLACK_CHANNEL_ID) {
+    handleSlackInput(payload.event).catch((err: unknown) => {
+      console.error("Error handling Slack input:", err);
+    });
   }
 })
 
 let ircClient: IRCClient | null = null;
 
 async function sendToSlack(message: string) {
-  slackClient.chat.postMessage({
-    channel: process.env.SLACK_CHANNEL_ID || '',
+  await slackClient.chat.postMessage({
+    channel: process.env.SLACK_CHANNEL_ID ?? '',
     text: message,
   })
 }
@@ -29,30 +31,32 @@ export async function setClient(client: IRCClient) {
   console.log("Slack socket connected")
 }
 
-
 /* slack response methods */
-var slackBotMethods = {
+const slackBotMethods = {
+  // eslint-disable-next-line @typescript-eslint/require-await
   'ping': async function() {
     // don't care about args here
     return "pong";
   },
 
   'say': async function(args: string[], context: GenericMessageEvent) {
-    var messageText = args.join(' ');
+    const messageText = args.join(' ');
     const userInfo = await slackClient.users.info({ user: context.user });
     // This block should never happen
     if(!userInfo.user?.name) {
       return "Could not find your Slack user info.";
     }
-    var composed = "[" + mapping.slackNameToIrcName(userInfo.user.name) + "] " + messageText;
-    ircClient!.say(process.env.IRC_CHANNEL || '', composed);
+    const composed = "[" + mapping.slackNameToIrcName(userInfo.user.name) + "] " + messageText;
+    if(ircClient) {
+      ircClient.say(process.env.IRC_CHANNEL ?? '', composed);
+    }
     return false;
   },
 
   'link': async function(args: string[], context: GenericMessageEvent) {
-    var response;
+    let response;
     switch(args.length) {
-      case 1:
+      case 1: {
         const userInfo = await slackClient.users.info({ user: context.user });
         // This block should never happen
         if(!userInfo.user?.name) {
@@ -62,6 +66,7 @@ var slackBotMethods = {
         response = mapping.link(userInfo.user.name,
                                 args[0]);
         break;
+      }
       case 2:
         response = mapping.link(args[0],
                                 args[1]);
@@ -72,14 +77,14 @@ var slackBotMethods = {
     }
 
     if (response) {
-      sendToSlack(response);
+      await sendToSlack(response);
     }
   },
 
   'unlink': async function(args: string[], context: GenericMessageEvent) {
-    var response;
+    let response;
     switch(args.length) {
-      case 0:
+      case 0: {
         const userInfo = await slackClient.users.info({ user: context.user });
         // This block should never happen
         if(!userInfo.user?.name) {
@@ -89,17 +94,19 @@ var slackBotMethods = {
         // no args, unlink all
         response = mapping.unlink(userInfo.user.name);
         break;
-      case 1:
-        const userInfo2 = await slackClient.users.info({ user: context.user });
+      }
+      case 1: {
+        const userInfo = await slackClient.users.info({ user: context.user });
         // This block should never happen
-        if(!userInfo2.user?.name) {
+        if(!userInfo.user?.name) {
           response = "Could not find your Slack user info.";
           break;
         }
         // 1 arg, unlink my slack name from the passed irc name
-        response = mapping.unlink(userInfo2.user.name,
+        response = mapping.unlink(userInfo.user.name,
                                   args[0]);
         break;
+      }
       case 2:
         // 2 args, slack name first, irc name second
         response = mapping.unlink(args[0],
@@ -110,25 +117,25 @@ var slackBotMethods = {
         break;
     }
     if (response) {
-      sendToSlack(response);
+      await sendToSlack(response);
     }
   },
 
-  'show': function(args: string[], context: GenericMessageEvent) {
-    var response;
+  'show': async function(args: string[]) {
+    let response;
     switch(args.length) {
       case 0:
         response = mapping.list();
         break;
     }
     if (response) {
-      sendToSlack(response);
+      await sendToSlack(response);
     }
   },
 }
 
 function isValidMethod(cmd: string): cmd is keyof typeof slackBotMethods {
-  return slackBotMethods.hasOwnProperty(cmd);
+  return cmd in slackBotMethods;
 }
 
 async function handleSlackInput(payload: GenericMessageEvent) {
@@ -137,13 +144,16 @@ async function handleSlackInput(payload: GenericMessageEvent) {
   }
   
   let deTriggered = payload.text;
-  let foundTrigger = false;
+  let foundTrigger = false as boolean;
   triggerWords.forEach((word) => {
     if (deTriggered.startsWith(word)) {
       deTriggered = deTriggered.slice(word.length).trim();
       foundTrigger = true;
     }
-  })
+  });
+  if (!foundTrigger) {
+    return;
+  }
   // remove trigger word
   let words = deTriggered.split(' ');
   if (words[0] == ':') {
@@ -153,12 +163,12 @@ async function handleSlackInput(payload: GenericMessageEvent) {
   const command = words[0];
   const args = words.slice(1);
   if (isValidMethod(command)) {
-    var response = await slackBotMethods[command](args, payload);
+    const response = await slackBotMethods[command](args, payload);
     if (response) {
-      sendToSlack(response);
+      await sendToSlack(response);
     }
   } else {
-    slackBotMethods['say'](words, payload);
+    await slackBotMethods.say(words, payload);
   }
 };
 
