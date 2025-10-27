@@ -1,4 +1,4 @@
-import { GenericMessageEvent, WebClient } from '@slack/web-api';
+import { GenericMessageEvent, UsersListResponse, WebClient } from '@slack/web-api';
 import { SocketModeClient } from '@slack/socket-mode';
 import { Client as IRCClient } from 'irc';
 import * as mapping from './mapping';
@@ -32,6 +32,20 @@ export async function setClient(client: IRCClient) {
   ircClient = client;
   await socketModeClient.start();
   console.log("Slack socket connected")
+  // Prepopulate username mappings for IRC inbound messages
+  for await (const page of slackClient.paginate("users.list")) {
+    const userListPage = page as UsersListResponse;
+    userListPage.members?.forEach((user) => {
+      if (user.name && user.id && !user.deleted) {
+        mapping.setNativeUser(user.id, user.name);
+      }
+    });
+  }
+}
+
+export async function getUserName(slackId: string) {
+  const userInfo = await slackClient.users.info({ user: slackId });
+  return userInfo.user?.name;
 }
 
 /* slack response methods */
@@ -44,13 +58,13 @@ const slackBotMethods = {
 
   'say': async function(args: string[], context: GenericMessageEvent) {
     const messageText = args.join(' ');
-    const userInfo = await slackClient.users.info({ user: context.user });
+    const userName = await getUserName(context.user);
     // This block should never happen
-    if(!userInfo.user?.name) {
+    if(!userName) {
       return "Could not find your Slack user info.";
     }
-    const composed = "[" + mapping.slackNameToIrcName(userInfo.user.name) + "] " + messageText;
     if(ircClient) {
+      const composed = await mapping.slackToIrc(`[<@${context.user}>] ${messageText}`);
       ircClient.say(process.env.IRC_CHANNEL ?? '', composed);
     }
     return false;
@@ -60,20 +74,9 @@ const slackBotMethods = {
     let response;
     switch(args.length) {
       case 1: {
-        const userInfo = await slackClient.users.info({ user: context.user });
-        // This block should never happen
-        if(!userInfo.user?.name) {
-          response = "Could not find your Slack user info.";
-          break;
-        }
-        response = mapping.link(userInfo.user.name,
-                                args[0]);
+        response = mapping.link(context.user, args[0]);
         break;
       }
-      case 2:
-        response = mapping.link(args[0],
-                                args[1]);
-        break;
       default:
         response = "I guess I should tell you how to use link..";
         break;
@@ -88,33 +91,16 @@ const slackBotMethods = {
     let response;
     switch(args.length) {
       case 0: {
-        const userInfo = await slackClient.users.info({ user: context.user });
-        // This block should never happen
-        if(!userInfo.user?.name) {
-          response = "Could not find your Slack user info.";
-          break;
-        }
         // no args, unlink all
-        response = mapping.unlink(userInfo.user.name);
+        response = mapping.unlink(context.user);
         break;
       }
       case 1: {
-        const userInfo = await slackClient.users.info({ user: context.user });
-        // This block should never happen
-        if(!userInfo.user?.name) {
-          response = "Could not find your Slack user info.";
-          break;
-        }
         // 1 arg, unlink my slack name from the passed irc name
-        response = mapping.unlink(userInfo.user.name,
+        response = mapping.unlink(context.user,
                                   args[0]);
         break;
       }
-      case 2:
-        // 2 args, slack name first, irc name second
-        response = mapping.unlink(args[0],
-                                  args[1]);
-        break;
       default:
         response = "I guess I should tell you how to unlink..";
         break;
