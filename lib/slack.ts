@@ -7,9 +7,12 @@ const triggerWords = (process.env.SLACK_TRIGGER_WORDS ?? 'ircbot,!').split(',');
 
 const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN);
 const socketModeClient = new SocketModeClient({ appToken: process.env.SLACK_APP_TOKEN ?? '' });
-socketModeClient.on('message.channels', ({ payload }: { payload: { event: GenericMessageEvent } }) => {
-  if (payload.event.channel == process.env.SLACK_CHANNEL_ID) {
-    handleSlackInput(payload.event).catch((err: unknown) => {
+socketModeClient.on('message', ({ body, ack }: { body: { event: GenericMessageEvent }, ack: () => Promise<void> }) => {
+  ack().catch((err: unknown) => {
+    console.error("Error acknowledging Slack message:", err);
+  })
+  if (body.event.channel == process.env.SLACK_CHANNEL_ID) {
+    handleSlackInput(body.event).catch((err: unknown) => {
       console.error("Error handling Slack input:", err);
     });
   }

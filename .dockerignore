@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Node modules (we'll install fresh in container)
+node_modules
+
+# Build output (we'll build fresh in container)
+build
+
+# Development and test files
+test
+.travis.yml
+
+# Environment files (should be provided at runtime)
+.env
+.env.example
+
+# Documentation
+*.md
+LICENSE
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# TODO kill this???
+# User mapping data (should be mounted as volume)
+# userMap.json

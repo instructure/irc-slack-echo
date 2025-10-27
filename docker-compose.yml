@@ -1,0 +1,4 @@
+services:
+  irc-slack-echo:
+    build: .
+    env_file: .env
