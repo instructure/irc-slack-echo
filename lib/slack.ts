@@ -161,3 +161,6 @@ async function handleSlackInput(payload: GenericMessageEvent) {
   }
 };
 
+export async function disconnect() {
+  await socketModeClient.disconnect();
+}

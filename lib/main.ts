@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { Client as IRCClient } from 'irc';
 
 import { ircToSlack } from './mapping';
-import { setClient as setSlackIrcClient, sendEcho } from './slack';
+import { setClient as setSlackIrcClient, sendEcho, disconnect as slackDisconnect } from './slack';
 import { handleCommand } from './ircCommands';
 
 /*
@@ -62,3 +62,24 @@ console.log("Connecting to IRC");
 client.connect(function(...args){
   console.log("connect called back", args);
 });
+
+function shutdown() {
+  console.log("Shutting down...");
+  const slackPromise = slackDisconnect()
+  const ircPromise = new Promise(resolve => {
+    client.disconnect("Shutting down", function() {
+      console.log("Disconnected from IRC");
+      resolve(true);
+    });
+  })
+  Promise.all([slackPromise, ircPromise]).then(() => {
+    console.log("Shutdown complete");
+    process.exit(0);
+  }).catch((err: unknown) => {
+    console.error("Error during shutdown:", err);
+    process.exit(1);
+  })
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
