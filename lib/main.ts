@@ -1,20 +1,19 @@
-var irc = require('irc');
+import 'dotenv/config'
 
-var ircCommands = require('./ircCommands');
-var mapping = require('./mapping');
-var slack = require('./slack');
+import { Client as IRCClient } from 'irc';
 
-var config = require('../config');
-
+import { ircToSlack } from './mapping';
+import { setClient as setSlackIrcClient, sendEcho } from './slack';
+import { handleCommand } from './ircCommands';
 
 /*
  * Set up the IRC client
  */
 
-var client = new irc.Client(config.irc.server, config.irc.nick, {
-  userName: config.irc.nick,
-  password: config.irc.password,
-  channels: [config.irc.channel],
+const client = new IRCClient(process.env.IRC_SERVER || '', process.env.IRC_NICK || '', {
+  userName: process.env.IRC_NICK || '',
+  password: process.env.IRC_PASSWORD || '',
+  channels: [process.env.IRC_CHANNEL || ''],
   port: 6697,
   sasl: true,
   debug: true,
@@ -25,7 +24,7 @@ var client = new irc.Client(config.irc.server, config.irc.nick, {
   retryCount: 3
 });
 
-slack.setClient(client);
+setSlackIrcClient(client);
 
 
 /*
@@ -37,16 +36,16 @@ client.addListener('message', function(from, to, message) {
   console.log(from + ' => ' + room + ': ' + message);
 
   // propagate the message to slack, even if it was a command
-  message = mapping.ircToSlack(message);
+  message = ircToSlack(message);
 
   var echoMessage = "[" + from + "] " + message;
-  slack.sendEcho(echoMessage);
+  sendEcho(echoMessage);
 
   // handle any commands
-  var botResponse = ircCommands.handleCommand(from, to, message);
+  var botResponse = handleCommand(from, to, message);
   if (botResponse) {
-    client.say(config.irc.channel, botResponse);
-    slack.sendEcho("[" + config.irc.nick + "] " + botResponse);
+    client.say(process.env.IRC_CHANNEL || '', botResponse);
+    sendEcho("[" + process.env.IRC_NICK + "] " + botResponse);
   }
 });
 

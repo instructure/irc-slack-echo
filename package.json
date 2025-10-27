@@ -1,23 +1,27 @@
 {
   "name": "irc-slack-echo",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Instructure IRC relay",
   "main": "lib/main.js",
   "scripts": {
+    "build": "tsc -p .",
     "test": "mocha -R spec ./test/**/*.test.js"
   },
   "author": "rknLA",
   "license": "MIT",
   "dependencies": {
-    "irc": "~0.5.2",
-    "@hapi/hapi": "^20.0.0",
-    "@hapi/boom": "^9.0.0"
+    "@slack/socket-mode": "^2.0.5",
+    "@slack/web-api": "^7.12.0",
+    "@types/irc": "^0.5.4",
+    "dotenv": "^17.2.3",
+    "irc": "~0.5.2"
   },
   "engines": {
-    "node": ">= 14.0.0"
+    "node": ">= 22.0.0"
   },
   "devDependencies": {
-    "chai": "^4.3.0",
-    "mocha": "^9.1.0"
+    "chai": "^6.2.0",
+    "mocha": "^11.7.0",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "outDir": "./build",
+    "allowJs": true,
+    "module": "node20",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["./lib/**/*"]
+}

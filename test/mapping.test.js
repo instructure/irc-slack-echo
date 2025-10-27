@@ -73,9 +73,5 @@ describe('Mapping', function () {
       var newMessage = mapping.ircToSlack(message);
       expect(newMessage).to.equal('hey <@coolname>');
     })
-
-
-
-
   });
 });
