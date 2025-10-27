@@ -2,3 +2,5 @@ services:
   irc-slack-echo:
     build: .
     env_file: .env
+    volumes:
+      - ./data:/app/data

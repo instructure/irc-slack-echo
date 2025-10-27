@@ -1,10 +1,9 @@
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { getUserName } from './slack';
 
-const userMapPath = 'userMap.json';
+const userMapPath = 'data/userMap.json';
 
-// TODO replace this terrible thing with a remote data store of some sort
-const userMap = new Map<string, string>();// JSON.parse(readFileSync(userMapPath, 'utf8'));
+const userMap = existsSync(userMapPath) ? new Map(Object.entries(JSON.parse(readFileSync(userMapPath, 'utf8')) as Record<string, string>)) : new Map<string, string>();
 
 function writeUserMap() {
   // synchronously write the user map file
@@ -31,7 +30,6 @@ export function ircToSlack(message: string) {
   }
   const urlRegex = /https?:\/\//;
   const mentionRegex = new RegExp('\\b(@?(' + Array.from(userMap.keys()).concat(Array.from(slackInverseUserMap.keys())).join('|') + '))\\b', 'ig');
-  console.log("Mention regex:", mentionRegex);
   return message.split(' ').map((word) => {
     if (urlRegex.test(word)) {
       return word;
