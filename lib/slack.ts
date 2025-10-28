@@ -1,6 +1,6 @@
 import { GenericMessageEvent, UsersListResponse, WebClient } from '@slack/web-api';
 import { SocketModeClient } from '@slack/socket-mode';
-import { Client as IRCClient } from 'irc';
+import { Client as IRCClient } from '@maths22/irc';
 import * as mapping from './mapping';
 
 const triggerWords = (process.env.SLACK_TRIGGER_WORDS ?? 'ircbot,!').split(',');

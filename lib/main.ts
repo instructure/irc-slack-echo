@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { Client as IRCClient } from 'irc';
+import { Client as IRCClient } from '@maths22/irc';
 
 import { ircToSlack } from './mapping';
 import { setClient as setSlackIrcClient, sendEcho, disconnect as slackDisconnect } from './slack';
@@ -16,8 +16,6 @@ const client = new IRCClient(process.env.IRC_SERVER ?? '', process.env.IRC_NICK 
   channels: process.env.IRC_CHANNEL ? [process.env.IRC_CHANNEL] : [],
   port: 6697,
   sasl: !!process.env.IRC_PASSWORD,
-  debug: true,
-  showErrors: true,
   secure: true,
   autoConnect: false,
   autoRejoin: true,
